@@ -8,13 +8,15 @@ command -v omniroute >/dev/null || npm install -g --silent omniroute
 SK="$HOME/.claude/skills"; T=$(mktemp -d); mkdir -p "$SK"
 get() { git clone -q --depth 1 --filter=blob:none --sparse "https://github.com/$1.git" "$T/$2" && git -C "$T/$2" sparse-checkout set $3; }
 get heygen-com/hyperframes hf skills && cp -r "$T"/hf/skills/*/ "$SK"/
-get DietrichGebert/ponytail pt skills && cp -r "$T"/pt/skills/*/ "$SK"/
 get Panniantong/Agent-Reach ar agent_reach/skill && cp -r "$T/ar/agent_reach/skill" "$SK/agent-reach"
 get NVIDIA/SkillSpector ss skills && cp -r "$T"/ss/skills/*/ "$SK"/
 get mromidev/claude-animated-shorts as "references templates" && mkdir -p "$SK/cartoon-3d-short" && cp -r "$T"/as/* "$SK/cartoon-3d-short"/
 get safishamsi/graphify gf graphify && mkdir -p "$SK/graphify" && cp "$T/gf/graphify/skill.md" "$SK/graphify/SKILL.md" && cp -r "$T/gf/graphify/skills/claude/references" "$SK/graphify"/
 get diegosouzapw/OmniRoute om skills && for d in "$T"/om/skills/*/; do [ "$(basename "$d")" = ponytail ] || cp -r "$d" "$SK"/; done
 rm -rf "$T"
+# Ponytail as Claude Code plugin (always-on hooks), Graphify registered in ~/.claude/CLAUDE.md
+command -v claude >/dev/null && { claude plugin marketplace add DietrichGebert/ponytail >/dev/null 2>&1; claude plugin install ponytail@ponytail --scope user >/dev/null 2>&1; }
+graphify install --platform claude >/dev/null 2>&1
 # OmniRoute: Claude Code starts it itself at every session start (stdio MCP launcher)
 D="$HOME/.omniroute"; mkdir -p "$D"; chmod 700 "$D"
 printf '%s\n' '#!/usr/bin/env bash' 'export PATH="$HOME/.local/bin:/opt/node22/bin:$PATH" OMNIROUTE_SERVER_HOST=127.0.0.1' \
@@ -22,7 +24,13 @@ printf '%s\n' '#!/usr/bin/env bash' 'export PATH="$HOME/.local/bin:/opt/node22/b
   'exec omniroute --mcp' > "$D/mcp-launch.sh"; chmod 700 "$D/mcp-launch.sh"
 command -v claude >/dev/null && { claude mcp remove --scope user omniroute >/dev/null 2>&1; claude mcp add --scope user omniroute -- "$D/mcp-launch.sh" >/dev/null 2>&1; }
 # Global rules: use the skills automatically, keep OmniRoute connected
-grep -q 'OmniRoute (auto)' "$HOME/.claude/CLAUDE.md" 2>/dev/null || cat >> "$HOME/.claude/CLAUDE.md" <<'EOF'
+grep -q 'Immer aktiv (nie abschalten)' "$HOME/.claude/CLAUDE.md" 2>/dev/null || cat >> "$HOME/.claude/CLAUDE.md" <<'EOF'
+
+## Immer aktiv (nie abschalten): Ponytail, OmniRoute, Graphify, Agent Skills
+- Ponytail: Plugin, Stufe full, bei jeder Code-Aufgabe aktiv.
+- OmniRoute: MCP-Server `omniroute`, bei jeder Sitzung verbunden.
+- Graphify: bei jeder Frage zur Codebase zuerst nutzen.
+- Agent Skills: alle Skills in ~/.claude/skills passend automatisch laden.
 
 ## Skills automatisch nutzen (alle Repos)
 Bei jeder Code-Arbeit den passenden Skill aus ~/.claude/skills ohne Nachfrage laden:
