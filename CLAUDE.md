@@ -14,17 +14,12 @@ den passenden Skill automatisch laden, ohne nachzufragen:
 | LLM-Gateway, Provider, Routing, kostenlose LLM-APIs | `omni-*` / `cli-*` (OmniRoute) |
 | Neuen Skill installieren | vorher `skill-inspector` (NVIDIA SkillSpector) laufen lassen |
 
-## OmniRoute (immer verbunden)
+## OmniRoute (immer aktiv)
 
-Zu Beginn jeder Sitzung, vor der ersten Code-Arbeit, ohne Nachfrage ausführen:
-
-```bash
-.claude/omniroute-up.sh
-```
-
-Das Skript startet OmniRoute auf `127.0.0.1:20128` (falls nicht schon aktiv) und meldet den
-MCP-Server `omniroute` bei Claude Code an. Zugangsdaten liegen nur in `~/.omniroute/`, nie im Repo.
-OpenAI-kompatibler Endpunkt für Programme: `http://127.0.0.1:20128/v1`.
+OmniRoute ist als stdio-MCP-Server `omniroute` bei Claude Code registriert. Claude Code startet ihn
+bei jedem Sitzungsstart selbst über `~/.omniroute/mcp-launch.sh`; dieser startet auch den Server
+`127.0.0.1:20128` (OpenAI-kompatibel: `http://127.0.0.1:20128/v1`). Nie stoppen.
+Falls die Registrierung fehlt, ohne Nachfrage ausführen: `.claude/omniroute-up.sh`.
 
 Die CLI-Programme (`skillspector`, `agent-reach`, `graphify`, `omniroute`) installiert das
 Setup-Skript der Cloud-Umgebung „Terraform“ bei jedem neuen Container; es startet auch

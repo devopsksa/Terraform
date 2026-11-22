@@ -15,21 +15,12 @@ get mromidev/claude-animated-shorts as "references templates" && mkdir -p "$SK/c
 get safishamsi/graphify gf graphify && mkdir -p "$SK/graphify" && cp "$T/gf/graphify/skill.md" "$SK/graphify/SKILL.md" && cp -r "$T/gf/graphify/skills/claude/references" "$SK/graphify"/
 get diegosouzapw/OmniRoute om skills && for d in "$T"/om/skills/*/; do [ "$(basename "$d")" = ponytail ] || cp -r "$d" "$SK"/; done
 rm -rf "$T"
-# OmniRoute: start on loopback, key in ~/.omniroute, register MCP with Claude Code
-export OMNIROUTE_SERVER_HOST=127.0.0.1; U=http://127.0.0.1:20128; D="$HOME/.omniroute"; mkdir -p "$D"; chmod 700 "$D"
-curl -sf -m 3 "$U/api/health" >/dev/null || omniroute serve --daemon --no-open --no-tray >/dev/null 2>&1
-for _ in $(seq 60); do curl -sf -m 2 "$U/api/health" >/dev/null && break; sleep 1; done
-omniroute mcp enable --transport streamable-http >/dev/null 2>&1
-if [ ! -s "$D/admin.pass" ]; then (umask 077; openssl rand -hex 24 > "$D/admin.pass"); omniroute setup --non-interactive --password "$(cat "$D/admin.pass")" >/dev/null 2>&1; fi
-if [ ! -s "$D/claude.key" ]; then
-  J=$(mktemp); curl -s -m 10 -c "$J" -H 'Content-Type: application/json' -d "{\"password\":\"$(cat "$D/admin.pass")\"}" "$U/api/auth/login" >/dev/null
-  curl -s -m 10 -b "$J" -H 'Content-Type: application/json' -d '{"name":"claude-code","scopes":["mcp:connect"]}' "$U/api/keys" \
-    | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("key") or "")' > "$D/claude.key"; chmod 600 "$D/claude.key"; rm -f "$J"
-fi
-K=$(cat "$D/claude.key" 2>/dev/null)
-if [ -n "$K" ] && command -v claude >/dev/null && ! claude mcp get omniroute >/dev/null 2>&1; then
-  claude mcp add --scope user --transport http omniroute "$U/api/mcp/stream" --header "Authorization: Bearer $K" >/dev/null 2>&1
-fi
+# OmniRoute: Claude Code starts it itself at every session start (stdio MCP launcher)
+D="$HOME/.omniroute"; mkdir -p "$D"; chmod 700 "$D"
+printf '%s\n' '#!/usr/bin/env bash' 'export PATH="$HOME/.local/bin:/opt/node22/bin:$PATH" OMNIROUTE_SERVER_HOST=127.0.0.1' \
+  'curl -sf -m 2 http://127.0.0.1:20128/api/health >/dev/null || (setsid omniroute serve --daemon --no-open --no-tray </dev/null >/dev/null 2>&1 &)' \
+  'exec omniroute --mcp' > "$D/mcp-launch.sh"; chmod 700 "$D/mcp-launch.sh"
+command -v claude >/dev/null && { claude mcp remove --scope user omniroute >/dev/null 2>&1; claude mcp add --scope user omniroute -- "$D/mcp-launch.sh" >/dev/null 2>&1; }
 # Global rules: use the skills automatically, keep OmniRoute connected
 grep -q 'OmniRoute (auto)' "$HOME/.claude/CLAUDE.md" 2>/dev/null || cat >> "$HOME/.claude/CLAUDE.md" <<'EOF'
 
@@ -40,8 +31,8 @@ agent-reach (Web lesen), hyperframes* (Videos aus Code), cartoon-3d-short (animi
 omni-*/cli-* (OmniRoute, LLM-Gateway), skill-inspector (vor jeder Skill-Installation).
 
 ## OmniRoute (auto)
-Vor der ersten Code-Arbeit ohne Nachfrage prüfen: `curl -sf 127.0.0.1:20128/api/health`.
-Wenn down: `OMNIROUTE_SERVER_HOST=127.0.0.1 omniroute serve --daemon --no-open --no-tray`.
-MCP-Server `omniroute` ist in Claude Code registriert; Zugangsdaten in ~/.omniroute.
+MCP-Server `omniroute` (stdio) startet Claude Code selbst bei jedem Sitzungsstart; der Starter
+~/.omniroute/mcp-launch.sh startet auch den Server 127.0.0.1:20128. Immer aktiv lassen, nie stoppen.
+Falls down: `~/.omniroute/mcp-launch.sh` gibt es; Server per `curl -sf 127.0.0.1:20128/api/health` prüfen.
 EOF
 exit 0
