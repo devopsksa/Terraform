@@ -12,7 +12,7 @@ cat > "$D/mcp-launch.sh" <<'EOF'
 export PATH="$HOME/.local/bin:/opt/node22/bin:$PATH" OMNIROUTE_SERVER_HOST=127.0.0.1
 command -v omniroute >/dev/null || npm install -g --silent omniroute >/dev/null 2>&1
 curl -sf -m 2 http://127.0.0.1:20128/api/health >/dev/null || \
-  (setsid omniroute serve --daemon --no-open --no-tray </dev/null >/dev/null 2>&1 &)
+  (nohup omniroute serve --daemon --no-open --no-tray </dev/null >/dev/null 2>&1 &)
 exec omniroute --mcp
 EOF
 chmod 700 "$D/mcp-launch.sh"
@@ -24,6 +24,6 @@ if command -v claude >/dev/null; then
   }
 fi
 curl -sf -m 2 http://127.0.0.1:20128/api/health >/dev/null || \
-  (OMNIROUTE_SERVER_HOST=127.0.0.1 setsid omniroute serve --daemon --no-open --no-tray </dev/null >/dev/null 2>&1 &)
+  (OMNIROUTE_SERVER_HOST=127.0.0.1 nohup omniroute serve --daemon --no-open --no-tray </dev/null >/dev/null 2>&1 &)
 echo "OmniRoute MCP: registered (stdio, auto-start)"
 exit 0

@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+# Einmal ausführen (Linux/macOS): bash setup/claude-environment-setup.sh
+# Aktiviert Ponytail, OmniRoute, Graphify und alle Agent Skills für Claude Code in ALLEN Ordnern.
 export PATH="$HOME/.local/bin:$PATH"
 command -v uv >/dev/null || pip install -q uv
 command -v skillspector >/dev/null || uv tool install -q git+https://github.com/NVIDIA/SkillSpector.git
@@ -20,7 +23,7 @@ graphify install --platform claude >/dev/null 2>&1
 # OmniRoute: Claude Code starts it itself at every session start (stdio MCP launcher)
 D="$HOME/.omniroute"; mkdir -p "$D"; chmod 700 "$D"
 printf '%s\n' '#!/usr/bin/env bash' 'export PATH="$HOME/.local/bin:/opt/node22/bin:$PATH" OMNIROUTE_SERVER_HOST=127.0.0.1' \
-  'curl -sf -m 2 http://127.0.0.1:20128/api/health >/dev/null || (setsid omniroute serve --daemon --no-open --no-tray </dev/null >/dev/null 2>&1 &)' \
+  'curl -sf -m 2 http://127.0.0.1:20128/api/health >/dev/null || (nohup omniroute serve --daemon --no-open --no-tray </dev/null >/dev/null 2>&1 &)' \
   'exec omniroute --mcp' > "$D/mcp-launch.sh"; chmod 700 "$D/mcp-launch.sh"
 command -v claude >/dev/null && { claude mcp remove --scope user omniroute >/dev/null 2>&1; claude mcp add --scope user omniroute -- "$D/mcp-launch.sh" >/dev/null 2>&1; }
 # Global rules: use the skills automatically, keep OmniRoute connected
